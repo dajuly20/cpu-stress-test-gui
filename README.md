@@ -7,10 +7,23 @@ Umfassende CPU Stress Test Tools mit grafischer Oberfläche und Monitoring.
 ### 🖥️ Hauptanwendung (EMPFOHLEN)
 - **`cpu-stress-gui.py`** - Grafische GUI-Anwendung mit Fenster
   - Live CPU-Monitoring aller Kerne
+  - Dropdown-Auswahl: Graph / bpytop / htop
   - Echtzeit-Graph der CPU-Auslastung
+  - Embedded Terminal-Support
   - Start/Stop-Steuerung
   - Log-Ausgabe
   - **Start:** `python3 cpu-stress-gui.py`
+
+### ⚙️ Installation & Setup
+- **`install-dependencies.sh`** - Automatisches Installations-Skript
+  - Installiert alle benötigten Pakete
+  - Prüft vorhandene Abhängigkeiten
+  - Interaktive Bestätigung
+  - **Start:** `./install-dependencies.sh`
+
+- **`start-gui.sh`** - Quick-Launcher für die GUI
+  - Einfacher Start der Hauptanwendung
+  - **Start:** `./start-gui.sh`
 
 ### 🔧 Terminal-basierte Tools
 - **`cpu-stress-test.sh`** - Einfacher CLI-Stresstest
@@ -30,10 +43,24 @@ Umfassende CPU Stress Test Tools mit grafischer Oberfläche und Monitoring.
 
 ## 🚀 Schnellstart
 
-### GUI-Anwendung (Empfohlen)
+### 1. Abhängigkeiten installieren
 ```bash
 cd "cpu stress gui"
+./install-dependencies.sh
+```
+
+Das Skript installiert automatisch:
+- xterm (Terminal-Emulator)
+- bpytop & htop (Monitoring-Tools)
+- stress-ng (CPU-Stresstest)
+- Python-Pakete (tkinter, psutil)
+- tmux (Terminal-Multiplexer)
+
+### 2. GUI-Anwendung starten (Empfohlen)
+```bash
 python3 cpu-stress-gui.py
+# oder
+./start-gui.sh
 ```
 
 ### Terminal Split-Screen
@@ -60,11 +87,16 @@ cd "cpu stress gui"
 
 - ✅ Automatische Erkennung der CPU-Anzahl (16 Kerne)
 - ✅ Live-Monitoring aller CPU-Kerne
-- ✅ Grafische Verlaufsanzeige
+- ✅ **Dropdown-Auswahl** für Monitoring-Ansicht:
+  - 📊 **Graph** - CPU-Verlaufsdiagramm
+  - 🖥️ **bpytop** - Integriertes bpytop-Terminal
+  - 📈 **htop** - Integriertes htop-Terminal
+- ✅ Grafische Verlaufsanzeige mit Echtzeit-Updates
 - ✅ Anpassbare Test-Dauer
 - ✅ Start/Stop-Steuerung
 - ✅ Farbcodierte CPU-Auslastung (Grün/Orange/Rot)
 - ✅ Live-Log-Ausgabe
+- ✅ Embedded Terminal-Unterstützung
 
 ## 🎨 GUI Screenshot
 
