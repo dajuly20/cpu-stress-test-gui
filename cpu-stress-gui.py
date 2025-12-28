@@ -5,13 +5,14 @@ Grafische Oberfläche für CPU-Stresstests mit Live-Monitoring
 """
 
 import tkinter as tk
-from tkinter import ttk, scrolledtext
+from tkinter import ttk, scrolledtext, messagebox
 import psutil
 import subprocess
 import threading
 import time
 from datetime import datetime
 import os
+import shutil
 
 class CPUStressGUI:
     def __init__(self, root):
@@ -93,6 +94,47 @@ class CPUStressGUI:
             pady=10
         )
         control_frame.pack(fill='x', padx=10, pady=10)
+
+        # CPU-Kern-Auswahl mit Slider
+        cpu_slider_frame = tk.Frame(control_frame, bg='#2d2d2d')
+        cpu_slider_frame.pack(fill='x', pady=5)
+
+        tk.Label(
+            cpu_slider_frame,
+            text="CPU-Kerne:",
+            font=('Arial', 10),
+            bg='#2d2d2d',
+            fg='#ffffff'
+        ).pack(side='left')
+
+        self.cpu_cores_var = tk.IntVar(value=self.cpu_count)
+        self.cpu_cores_label = tk.Label(
+            cpu_slider_frame,
+            text=f"{self.cpu_count}/{self.cpu_count}",
+            font=('Arial', 10, 'bold'),
+            bg='#2d2d2d',
+            fg='#00ff00',
+            width=8
+        )
+        self.cpu_cores_label.pack(side='right', padx=5)
+
+        self.cpu_slider = tk.Scale(
+            cpu_slider_frame,
+            from_=1,
+            to=self.cpu_count,
+            orient='horizontal',
+            variable=self.cpu_cores_var,
+            command=self.update_cpu_label,
+            bg='#2d2d2d',
+            fg='#ffffff',
+            highlightthickness=0,
+            troughcolor='#1e1e1e',
+            activebackground='#00aa00',
+            sliderrelief='flat',
+            showvalue=False,
+            length=200
+        )
+        self.cpu_slider.pack(side='left', fill='x', expand=True, padx=10)
 
         # Dauer-Auswahl
         duration_frame = tk.Frame(control_frame, bg='#2d2d2d')
@@ -308,6 +350,11 @@ class CPUStressGUI:
         self.log_text.pack(fill='both', expand=True)
         self.log_text.insert('1.0', "Bereit für Stress Test...\n")
 
+    def update_cpu_label(self, value):
+        """Update CPU-Kern-Label wenn Slider bewegt wird"""
+        cores = int(float(value))
+        self.cpu_cores_label.config(text=f"{cores}/{self.cpu_count}")
+
     def change_view(self, event=None):
         """Wechsle zwischen Graph und Terminal-Ansicht"""
         new_view = self.view_var.get()
@@ -470,27 +517,31 @@ class CPUStressGUI:
             self.log("❌ Ungültige Dauer! Bitte eine Zahl eingeben.\n")
             return
 
+        # Hole ausgewählte CPU-Kerne
+        cpu_cores = self.cpu_cores_var.get()
+
         self.is_running = True
         self.start_button.config(state='disabled')
         self.stop_button.config(state='normal')
+        self.cpu_slider.config(state='disabled')
         self.status_label.config(text="🟢 Test läuft...", fg='#00ff00')
 
         self.log(f"\n{'='*50}\n")
         self.log(f"🚀 Starte CPU Stress Test\n")
-        self.log(f"CPU Kerne: {self.cpu_count}\n")
+        self.log(f"CPU Kerne: {cpu_cores} von {self.cpu_count}\n")
         self.log(f"Dauer: {duration} Sekunden\n")
         self.log(f"Start: {datetime.now().strftime('%H:%M:%S')}\n")
         self.log(f"{'='*50}\n\n")
 
         # Stress Test in separatem Thread
-        thread = threading.Thread(target=self.run_stress_test, args=(duration,))
+        thread = threading.Thread(target=self.run_stress_test, args=(duration, cpu_cores))
         thread.daemon = True
         thread.start()
 
-    def run_stress_test(self, duration):
+    def run_stress_test(self, duration, cpu_cores):
         """Führe Stress Test aus"""
         try:
-            cmd = ['stress-ng', '--cpu', str(self.cpu_count), '--timeout', f'{duration}s', '--metrics-brief']
+            cmd = ['stress-ng', '--cpu', str(cpu_cores), '--timeout', f'{duration}s', '--metrics-brief']
 
             self.stress_process = subprocess.Popen(
                 cmd,
@@ -535,6 +586,7 @@ class CPUStressGUI:
         """Setze Button-Status zurück"""
         self.start_button.config(state='normal')
         self.stop_button.config(state='disabled')
+        self.cpu_slider.config(state='normal')
         self.status_label.config(text="⚪ Bereit", fg='#ffaa00')
 
     def log(self, message):
@@ -548,8 +600,69 @@ class CPUStressGUI:
         if self.stress_process and self.stress_process.poll() is None:
             self.stress_process.terminate()
 
+def check_dependencies():
+    """Prüfe ob alle optionalen Abhängigkeiten installiert sind"""
+    missing = []
+
+    # Prüfe stress-ng (kritisch)
+    if not shutil.which('stress-ng'):
+        missing.append('stress-ng')
+
+    # Prüfe xterm (für embedded terminals)
+    if not shutil.which('xterm'):
+        missing.append('xterm')
+
+    # Prüfe bpytop (optional)
+    if not shutil.which('bpytop'):
+        missing.append('bpytop')
+
+    # Prüfe htop (optional)
+    if not shutil.which('htop'):
+        missing.append('htop')
+
+    return missing
+
+def show_dependency_warning(missing):
+    """Zeige Warnung für fehlende Abhängigkeiten"""
+    if not missing:
+        return
+
+    # Erstelle Warnungsnachricht
+    message = "⚠️  Fehlende Abhängigkeiten:\n\n"
+
+    for dep in missing:
+        message += f"  • {dep}\n"
+
+    message += "\n"
+
+    # Hinweise je nach fehlenden Paketen
+    if 'stress-ng' in missing:
+        message += "⚠️  stress-ng ist erforderlich für CPU-Tests!\n\n"
+
+    if 'xterm' in missing:
+        message += "⚠️  xterm wird für bpytop/htop-Ansichten benötigt!\n\n"
+
+    if 'bpytop' in missing or 'htop' in missing:
+        message += "ℹ️  bpytop/htop sind optional (Graph-Ansicht verfügbar)\n\n"
+
+    message += "Installation mit:\n"
+    message += f"  sudo apt install {' '.join(missing)}\n\n"
+    message += "Oder nutzen Sie:\n"
+    message += "  ./install-dependencies.sh"
+
+    # Zeige Warnung
+    messagebox.showwarning("Fehlende Abhängigkeiten", message)
+
 def main():
+    # Prüfe Abhängigkeiten vor GUI-Start
+    missing_deps = check_dependencies()
+
     root = tk.Tk()
+
+    # Zeige Warnung wenn nötig (nur wenn GUI läuft)
+    if missing_deps:
+        root.after(100, lambda: show_dependency_warning(missing_deps))
+
     app = CPUStressGUI(root)
 
     # Cleanup beim Schließen
